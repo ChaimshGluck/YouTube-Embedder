@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Embedder</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='6' width='30' height='20' rx='6' ry='6' fill='%23ff0000'/><polygon points='13,10 13,22 23,16' fill='%23ffffff'/></svg>" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+
+  <div class="page-layout">
+  <div class="main-col">
+
+  <h1>YouTube Embedder</h1>
+  <p class="subtitle">Paste a YouTube URL to get the embed code and preview</p>
+
+  <div class="input-row">
+    <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." />
+    <button onclick="handleEmbed()">Embed</button>
+  </div>
+
+  <p class="error" id="errorMsg">Could not find a valid YouTube video ID. Please check the URL.</p>
+
+  <div class="result" id="result">
+    <div class="video-wrapper">
+      <div id="videoFrame"></div>
+    </div>
+    <div class="speed-bar" id="speedBar">
+      <span class="speed-label">Speed</span>
+      <div class="speed-buttons" id="speedButtons"></div>
+      <span class="speed-hint">Shift+&lt; &nbsp; Shift+&gt;</span>
+    </div>
+
+    <div class="embed-code-section">
+      <label>Embed Code</label>
+      <div class="embed-code-box" id="embedCode"></div>
+      <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy Embed Code</button>
+    </div>
+
+  </div>
+
+  </div><!-- /.main-col -->
+
+  <aside class="shortcuts-panel">
+    <h2>Keyboard Shortcuts</h2>
+
+    <div class="shortcut-group">
+      <div class="shortcut-group-title">Playback</div>
+      <div class="shortcut-row"><kbd>K</kbd><span>or</span><kbd>Space</kbd><span class="shortcut-desc">Play / Pause</span></div>
+      <div class="shortcut-row"><kbd>F</kbd><span class="shortcut-desc">Toggle fullscreen</span></div>
+      <div class="shortcut-row"><kbd>M</kbd><span class="shortcut-desc">Mute / Unmute</span></div>
+    </div>
+
+    <div class="shortcut-group">
+      <div class="shortcut-group-title">Seek</div>
+      <div class="shortcut-row"><kbd>&#8594;</kbd><span class="shortcut-desc">+5 seconds</span></div>
+      <div class="shortcut-row"><kbd>&#8592;</kbd><span class="shortcut-desc">&minus;5 seconds</span></div>
+      <div class="shortcut-row"><kbd>L</kbd><span class="shortcut-desc">+10 seconds</span></div>
+      <div class="shortcut-row"><kbd>J</kbd><span class="shortcut-desc">&minus;10 seconds</span></div>
+      <div class="shortcut-row"><kbd>.</kbd><span class="shortcut-desc">+1 frame</span></div>
+      <div class="shortcut-row"><kbd>,</kbd><span class="shortcut-desc">&minus;1 frame</span></div>
+      <div class="shortcut-row"><kbd>0</kbd><span class="shortcut-desc">–</span><kbd>9</kbd><span class="shortcut-desc">Jump to 0–90%</span></div>
+    </div>
+
+    <div class="shortcut-group">
+      <div class="shortcut-group-title">Volume</div>
+      <div class="shortcut-row"><kbd>&#8593;</kbd><span class="shortcut-desc">+5%</span></div>
+      <div class="shortcut-row"><kbd>&#8595;</kbd><span class="shortcut-desc">&minus;5%</span></div>
+    </div>
+
+    <div class="shortcut-group">
+      <div class="shortcut-group-title">Speed</div>
+      <div class="shortcut-row"><kbd>Shift</kbd><span>+</span><kbd>&gt;</kbd><span class="shortcut-desc">Faster</span></div>
+      <div class="shortcut-row"><kbd>Shift</kbd><span>+</span><kbd>&lt;</kbd><span class="shortcut-desc">Slower</span></div>
+    </div>
+  </aside>
+
+  </div><!-- /.page-layout -->
+
+  <script src="js/state.js"></script>
+  <script src="js/speed.js"></script>
+  <script src="js/fullscreen.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/shortcuts.js"></script>
+
+</body>
+</html>
