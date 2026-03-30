@@ -8,11 +8,29 @@ A lightweight local web app that lets you paste any YouTube URL, preview the vid
 
 **Requirements:** [Node.js](https://nodejs.org) (any recent version)
 
+### Option 1 — Double-click (Windows, recommended)
+
+Double-click **`start.bat`**. It will:
+1. Launch `node server.js` in the background
+2. Automatically open **http://localhost:3010** in your default browser
+
+This is the easiest way to run the app and avoids any file:// protocol issues (see below).
+
+### Option 2 — Terminal
+
 ```bash
 node server.js
 ```
 
-Then open **http://localhost:3010** in your browser.
+Then open **http://localhost:3010** manually in your browser.
+
+### Why use the server instead of opening the HTML file directly?
+
+If you open `youtube-embed.html` directly from your file system (`file://` URL), the browser blocks several things:
+- Loading local `.js` and `.css` files from subfolders (CORS / mixed-content restrictions)
+- The YouTube IFrame API may refuse to initialise inside a `file://` page
+
+Running through the Node.js server serves everything over `http://localhost`, which the browser treats as a normal secure origin — no restrictions.
 
 ---
 
@@ -93,6 +111,7 @@ Shortcuts work even while the video is playing inside the iframe, because `short
 
 | File | Responsibility |
 |------|---------------|
+| `start.bat` | Windows launcher. Opens the browser to `http://localhost:3010` then starts `node server.js` in the same window. Double-click to run the whole app in one step. |
 | `server.js` | Minimal Node.js HTTP server. Serves static files, strips query strings before resolving file paths, returns correct MIME types. |
 | `youtube-embed.html` | Page structure. Loads the YouTube IFrame API script and all JS modules. |
 | `style.css` | Dark theme styling. Includes layout (3-column grid to keep the video centered alongside the shortcuts panel), video wrapper, speed bar, embed code box, and responsive breakpoints. |
