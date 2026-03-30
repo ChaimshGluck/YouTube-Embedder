@@ -62,7 +62,7 @@ document.addEventListener('fullscreenchange', function () {
 
   if (document.fullscreenElement) {
     // Now in fullscreen — show the collapse (shrink) icon
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M5 15H3v6h6v-2H5v-4zm-2-6h2V5h4V3H3v6zm14 10h-4v2h6v-6h-2v4zM15 3v2h4v4h2V3h-6z"/></svg>';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M5 15H3v6h6v-2H5v-4zm-2-6h2V5h4V3H3v6zM19 15H21v6h-6v-2H19v-4zM15 3v2h4v4h2V3h-6z"/></svg>';
     btn.title = 'Exit fullscreen  (F)';
   } else {
     // Back to normal — restore the expand icon
