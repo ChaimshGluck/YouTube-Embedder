@@ -28,7 +28,7 @@ Then open **http://localhost:3010** manually in your browser.
 
 If you open `youtube-embed.html` directly from your file system (`file://` URL), the browser blocks several things:
 - Loading local `.js` and `.css` files from subfolders (CORS / mixed-content restrictions)
-- The YouTube IFrame API may refuse to initialise inside a `file://` page
+- The YouTube IFrame API may refuse to initialize inside a `file://` page
 
 Running through the Node.js server serves everything over `http://localhost`, which the browser treats as a normal secure origin — no restrictions.
 
@@ -81,15 +81,15 @@ Click **Copy Embed Code** to copy the generated `<iframe>` snippet to your clipb
 ### Playback Speed
 A speed bar below the video lets you select from `0.25x` to `2x`. The active speed is highlighted in red. Resets to `1×` on every new video.
 
-### Custom Fullscreen
-A custom fullscreen button overlays the video (visible on hover). It puts the **wrapper div** — not the YouTube iframe — into fullscreen. This keeps keyboard focus on the parent page so all shortcuts continue working while fullscreen.
+### Custom Full-screen
+A custom full-screen button overlays the video (visible on hover). It puts the **wrapper div** — not the YouTube i-frame — into full-screen. This keeps keyboard focus on the parent page so all shortcuts continue working while full-screen.
 
 ### Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
 | `K` or `Space` | Play / Pause |
-| `F` | Toggle fullscreen |
+| `F` | Toggle full-screen |
 | `M` | Mute / Unmute |
 | `→` | Seek +5 seconds |
 | `←` | Seek −5 seconds |
@@ -103,7 +103,7 @@ A custom fullscreen button overlays the video (visible on hover). It puts the **
 | `Shift` + `<` | Slow down |
 | `0` – `9` | Jump to 0%–90% of video |
 
-Shortcuts work even while the video is playing inside the iframe, because `shortcuts.js` reclaims window focus via the `blur` event.
+Shortcuts work even while the video is playing inside the i-frame, because `shortcuts.js` reclaims window focus via the `blur` event.
 
 ---
 
@@ -115,8 +115,8 @@ Shortcuts work even while the video is playing inside the iframe, because `short
 | `server.js` | Minimal Node.js HTTP server. Serves static files, strips query strings before resolving file paths, returns correct MIME types. |
 | `youtube-embed.html` | Page structure. Loads the YouTube IFrame API script and all JS modules. |
 | `style.css` | Dark theme styling. Includes layout (3-column grid to keep the video centered alongside the shortcuts panel), video wrapper, speed bar, embed code box, and responsive breakpoints. |
-| `js/state.js` | Declares `player`, `SPEEDS`, and `currentSpeedIdx` as globals shared across all modules. |
+| `js/state.js` | Declares `player`, `SPEEDS`, and `currentSpeedIdx` as global shared across all modules. |
 | `js/player.js` | `extractVideoId()` parses URLs. `handleEmbed()` creates or reloads the `YT.Player` instance. `copyCode()` writes the embed snippet to the clipboard. |
 | `js/speed.js` | `buildSpeedButtons()` renders the speed bar. `setSpeed(idx)` updates both the player rate and the active button highlight. |
-| `js/fullscreen.js` | `setupCustomFullscreen()` injects the overlay button and strips the iframe's native fullscreen permission. `toggleFullscreen()` calls the browser Fullscreen API on the wrapper. |
+| `js/fullscreen.js` | `setupCustomFullscreen()` injects the overlay button and strips the i-frame's native full-screen permission. `toggleFullscreen()` calls the browser Full-screen API on the wrapper. |
 | `js/shortcuts.js` | Single `keydown` listener handles all shortcuts. Also wires the Enter key on the URL input. |
