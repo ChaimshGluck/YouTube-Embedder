@@ -107,6 +107,19 @@ function handleEmbed() {
   }
 }
 
+// pasteAndEmbed()
+// Reads text from the clipboard, sets it as the input value, then embeds it.
+async function pasteAndEmbed() {
+  try {
+    const text = await navigator.clipboard.readText();
+    document.getElementById('urlInput').value = text.trim();
+    handleEmbed();
+  } catch {
+    // Fallback: focus the input so the user can paste manually
+    document.getElementById('urlInput').focus();
+  }
+}
+
 // copyCode()
 // Copies the generated embed code to the clipboard using the modern
 // Clipboard API and briefly changes the button label to confirm success.
