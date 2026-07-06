@@ -20,6 +20,7 @@
     <input type="text" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." />
     <button onclick="pasteAndEmbed()" title="Paste from clipboard and embed">Paste & Embed</button>
     <button onclick="handleEmbed()">Embed</button>
+    <button id="downloadBtn" class="download-btn" onclick="downloadVideo()">Download Video</button>
   </div>
 
   <p class="error" id="errorMsg">Could not find a valid YouTube video ID. Please check the URL.</p>
@@ -84,6 +85,7 @@
   <script src="js/speed.js"></script>
   <script src="js/fullscreen.js"></script>
   <script src="js/player.js"></script>
+  <script src="js/download.js"></script>
   <script src="js/shortcuts.js"></script>
 
 </body>

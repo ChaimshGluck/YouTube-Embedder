@@ -90,6 +90,20 @@ button:active {
   transform: scale(0.97);
 }
 
+.download-btn {
+  background: #1a4d2e;
+}
+
+.download-btn:hover {
+  background: #226b3f;
+}
+
+.download-btn:disabled {
+  background: #333;
+  color: #888;
+  cursor: not-allowed;
+}
+
 .error {
   margin-top: 16px;
   color: #ff5555;
