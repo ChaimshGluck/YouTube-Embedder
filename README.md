@@ -37,6 +37,47 @@ Running through the Node.js server serves everything over `http://localhost`, wh
 
 ---
 
+## Deployment
+
+The **Download Video** feature needs a real server that can run Node, Python + yt-dlp, and ffmpeg. A static host (e.g. Netlify) cannot run any of these — on a static deploy the `/api/download` request is served the HTML page instead, so the browser "downloads" an unplayable file. Deploy the whole app (static files **and** the API are both served by `server.js`) to a host that runs containers.
+
+### Render (one-click via the included blueprint)
+
+1. Push this repo to GitHub.
+2. In Render: **New → Blueprint**, point it at the repo. Render reads [`render.yaml`](render.yaml) and builds the [`Dockerfile`](Dockerfile) (Node + Python + yt-dlp + ffmpeg + Deno).
+3. Once live, open the service URL — embed **and** download both work over `https://…`.
+
+The same `Dockerfile` works on Railway, Fly.io, or any container host. Locally you can run it with:
+
+```bash
+docker build -t youtube-embedder .
+docker run -p 3010:3010 youtube-embedder
+```
+
+> **Deno** is installed in the image because modern YouTube requires running a JS "nsig" signature challenge to obtain valid media URLs; yt-dlp auto-detects Deno and uses it. Without a JS runtime, downloads fail with `HTTP Error 403: Forbidden`.
+
+### Datacenter-IP block (429 / "confirm you're not a bot")
+
+YouTube frequently refuses requests from cloud/datacenter IPs — especially shared free-tier IPs like Render's — with `HTTP Error 429: Too Many Requests` and `Sign in to confirm you're not a bot`. This never happens from a home (residential) IP, so it only shows up once deployed.
+
+The fix is to authenticate yt-dlp with exported YouTube cookies. The server reads the optional `YTDLP_COOKIES` env var — if set to the path of a Netscape-format `cookies.txt`, it passes `--cookies <path>` to yt-dlp. Unset (e.g. locally), nothing changes.
+
+**To set it up on Render:**
+
+1. Export your YouTube cookies to a `cookies.txt` (Netscape format) — e.g. with a "Get cookies.txt" browser extension while logged in to YouTube. See yt-dlp's [How do I pass cookies](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) guide.
+2. In the Render dashboard: service → **Environment → Secret Files → Add Secret File**. Filename `cookies.txt`, paste the file contents. Render mounts it at `/etc/secrets/cookies.txt`.
+3. Add an env var **`YTDLP_COOKIES` = `/etc/secrets/cookies.txt`**, then redeploy.
+
+**Important caveats:**
+- **Never commit `cookies.txt` to the repo** — it's a live login credential to your Google account. Use the Secret File mechanism only. (`cookies.txt` is gitignored.)
+- Prefer cookies from a **throwaway Google account**, not your main one — Google can flag/lock an account whose cookies are used from a datacenter IP.
+- Cookies expire and YouTube rotates them, so this needs occasional refreshing.
+- Even with cookies, a heavily-abused shared free-tier IP may still be blocked. The robust (but paid) fix is routing yt-dlp through a residential proxy, or running on a host with a cleaner dedicated IP.
+
+> The `_redirects` file in the repo is Netlify-specific and is ignored when the app runs under `server.js` (the Node server does its own routing).
+
+---
+
 ## How It Works
 
 ### Architecture
