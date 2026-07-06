@@ -37,6 +37,31 @@ Running through the Node.js server serves everything over `http://localhost`, wh
 
 ---
 
+## Deployment
+
+The **Download Video** feature needs a real server that can run Node, Python + yt-dlp, and ffmpeg. A static host (e.g. Netlify) cannot run any of these — on a static deploy the `/api/download` request is served the HTML page instead, so the browser "downloads" an unplayable file. Deploy the whole app (static files **and** the API are both served by `server.js`) to a host that runs containers.
+
+### Render (one-click via the included blueprint)
+
+1. Push this repo to GitHub.
+2. In Render: **New → Blueprint**, point it at the repo. Render reads [`render.yaml`](render.yaml) and builds the [`Dockerfile`](Dockerfile) (Node + Python + yt-dlp + ffmpeg + Deno).
+3. Once live, open the service URL — embed **and** download both work over `https://…`.
+
+The same `Dockerfile` works on Railway, Fly.io, or any container host. Locally you can run it with:
+
+```bash
+docker build -t youtube-embedder .
+docker run -p 3010:3010 youtube-embedder
+```
+
+> **Deno** is installed in the image because modern YouTube requires running a JS "nsig" signature challenge to obtain valid media URLs; yt-dlp auto-detects Deno and uses it. Without a JS runtime, downloads fail with `HTTP Error 403: Forbidden`.
+
+> **Datacenter-IP caveat:** YouTube sometimes blocks requests from cloud/datacenter IP ranges with a "Sign in to confirm you're not a bot" error. If that happens on your host, yt-dlp supports passing browser cookies (`--cookies`/`--cookies-from-browser`); that's a per-deploy configuration decision, not wired into the app by default.
+
+> The `_redirects` file in the repo is Netlify-specific and is ignored when the app runs under `server.js` (the Node server does its own routing).
+
+---
+
 ## How It Works
 
 ### Architecture

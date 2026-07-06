@@ -5,8 +5,14 @@ const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
 
-const PORT = 3010;
+// Hosts like Render/Railway/Fly inject the port to bind via $PORT; fall back to
+// 3010 for local `node server.js`.
+const PORT = process.env.PORT || 3010;
 const DIR = __dirname;
+
+// `python` on Windows, but Debian-based container images ship `python3`. Let the
+// runtime override which interpreter launches yt-dlp (see Dockerfile).
+const PYTHON_BIN = process.env.PYTHON_BIN || "python";
 
 const MIME_TYPES = {
   ".html": "text/html",
@@ -61,7 +67,7 @@ function handleDownload(req, res) {
     videoUrl,
   ];
 
-  const proc = spawn("python", args, { windowsHide: true });
+  const proc = spawn(PYTHON_BIN, args, { windowsHide: true });
 
   let stderr = "";
   proc.stderr.on("data", (chunk) => {
@@ -155,7 +161,7 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log("Press Ctrl+C to stop.");
 });
