@@ -1,0 +1,4 @@
+# Never commit exported YouTube cookies — they are live account credentials.
+cookies.txt
+*.cookies.txt
+node_modules

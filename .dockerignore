@@ -1,5 +1,7 @@
 .git
 .gitignore
+cookies.txt
+*.cookies.txt
 node_modules
 *.md
 _redirects

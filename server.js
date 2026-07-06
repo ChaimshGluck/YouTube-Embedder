@@ -14,6 +14,13 @@ const DIR = __dirname;
 // runtime override which interpreter launches yt-dlp (see Dockerfile).
 const PYTHON_BIN = process.env.PYTHON_BIN || "python";
 
+// Cloud/datacenter IPs (e.g. Render) get YouTube's "confirm you're not a bot"
+// 429 block. Passing exported YouTube cookies authenticates the request and
+// usually clears it. Set YTDLP_COOKIES to the path of a Netscape-format
+// cookies.txt (on Render, a Secret File mounted at /etc/secrets/...). Unset
+// locally — a residential IP doesn't need it. See README.
+const COOKIES_FILE = process.env.YTDLP_COOKIES;
+
 const MIME_TYPES = {
   ".html": "text/html",
   ".css": "text/css",
@@ -66,6 +73,10 @@ function handleDownload(req, res) {
     outputTemplate,
     videoUrl,
   ];
+
+  if (COOKIES_FILE) {
+    args.push("--cookies", COOKIES_FILE);
+  }
 
   const proc = spawn(PYTHON_BIN, args, { windowsHide: true });
 
