@@ -5,6 +5,11 @@
 // Depends on: player.js (extractVideoId)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// This page is deployed on Netlify (static hosting, no server), but the
+// download API runs on the GroupMeApi Express app on the DigitalOcean droplet
+// — a different origin.
+const API_BASE = "https://t-proj-program.com";
+
 async function downloadVideo() {
   const url      = document.getElementById('urlInput').value.trim();
   const errorMsg = document.getElementById('errorMsg');
@@ -21,7 +26,7 @@ async function downloadVideo() {
   btn.textContent = 'Downloading…';
 
   try {
-    const res = await fetch('/api/download?url=' + encodeURIComponent(url));
+    const res = await fetch(API_BASE + '/downloader/api/download?url=' + encodeURIComponent(url));
     if (!res.ok) {
       const text = await res.text();
       throw new Error(text || `Server responded with ${res.status}`);
