@@ -21,9 +21,11 @@ is a hand-rolled HTTP server that:
   browser. Temp files are written to a per-request temp dir and deleted after the
   response finishes.
 
-Frontend and API are the **same** Node process, and `js/download.js` calls the
-**relative** path `/api/download`, so wherever `server.js` is hosted, the download
-button "just works" with no CORS config.
+Frontend and API are the **same** Node process by default, and `js/download.js`
+calls the **relative** path `/api/download`. **But for this deployment we are
+splitting them** (see decision below): the frontend stays on Netlify and ONLY the
+`/api/download` API runs on the droplet — so they end up on different origins,
+which requires CORS + an absolute API URL (details in the plan).
 
 ---
 
@@ -36,10 +38,21 @@ prerequisites. Priorities, in order:
 1. **Always-on / zero prerequisites** (most important).
 2. **Cheapest possible**, but willing to pay a little if genuinely needed.
 
-Decision: **co-host this app on the user's EXISTING DigitalOcean droplet** as an
-additional service on **another endpoint** (a subdomain like
-`downloader.<their-domain>` or a path). Marginal cost ≈ $0 since the droplet is
-already paid for. This beats a new VPS or Render.
+Decision: **run ONLY the download API on the user's EXISTING DigitalOcean
+droplet**, on **another endpoint** (a subdomain like `downloader.<their-domain>`).
+Marginal cost ≈ $0 since the droplet is already paid for. This beats a new VPS or
+Render.
+
+**The frontend STAYS on Netlify** — do NOT serve the static site from the droplet.
+The user wants the droplet to run only the download server, nothing extra. So:
+
+- Netlify keeps serving `youtube-embed.html` + `js/*` + `style.css` exactly as now.
+- The droplet runs `server.js`, but only its `/api/download` route is used in
+  production (its static-file routes simply go unused — that's fine, leave them;
+  ripping them out isn't worth the churn and static serving is zero weight).
+- Because the page (Netlify) and API (droplet) are now **cross-origin**, two edits
+  are required: CORS headers on the droplet's API, and an absolute API URL in the
+  Netlify frontend's `download.js`. Both are spelled out in the plan.
 
 ---
 
@@ -92,6 +105,8 @@ services:
       - PYTHON_BIN=python3
       - NODE_ENV=production
       - PORT=3010
+      # Lock CORS to the Netlify site that hosts the frontend:
+      - ALLOWED_ORIGIN=https://<your-site>.netlify.app
       # Point yt-dlp's bgutil plugin at the POT provider service:
       - POT_PROVIDER_URL=http://pot-provider:4416
       # Cookies: mount a throwaway-account cookies.txt (see volumes) and point here:
@@ -119,10 +134,10 @@ services:
 > can route to it. If the proxy is on the host (bare nginx), publish the app on
 > `127.0.0.1:3010` and proxy_pass to it.
 
-### `server.js` changes needed (small — add proxy + POT support)
+### `server.js` changes needed (proxy + POT + CORS)
 
 The current `server.js` already supports `PORT`, `PYTHON_BIN`, and
-`YTDLP_COOKIES`. **Add two more env vars** near the other `const` declarations:
+`YTDLP_COOKIES`. **Add three more env vars** near the other `const` declarations:
 
 ```js
 // Residential-proxy backstop for when a datacenter IP is blocked even with
@@ -132,6 +147,12 @@ const YTDLP_PROXY = process.env.YTDLP_PROXY;
 // bgutil PO Token provider base URL (the pot-provider service). Lets yt-dlp
 // obtain Proof-of-Origin tokens YouTube now requires on datacenter IPs.
 const POT_PROVIDER_URL = process.env.POT_PROVIDER_URL;
+
+// The frontend is served from Netlify (a different origin), so the API must send
+// CORS headers. Set to the exact Netlify site origin, e.g.
+// "https://your-site.netlify.app" (or the custom domain). Defaults to "*" for
+// convenience, but pin it to the real origin in production.
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 ```
 
 Then, in `handleDownload`, right after the existing `if (COOKIES_FILE) {...}`
@@ -148,6 +169,49 @@ if (POT_PROVIDER_URL) {
   );
 }
 ```
+
+**CORS (required because frontend ≠ API origin now).** In the top-level request
+handler, when `urlPath === "/api/download"`, set CORS headers BEFORE dispatching,
+and short-circuit any preflight. Critically, `download.js` reads the filename from
+the `Content-Disposition` response header — cross-origin, the browser hides that
+header unless it is explicitly exposed. So:
+
+```js
+if (urlPath === "/api/download") {
+  res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+  res.setHeader("Vary", "Origin");
+  // Without this, download.js cannot read the filename cross-origin:
+  res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+  handleDownload(req, res);
+  return;
+}
+```
+
+(`res.setHeader` before `res.writeHead` is fine — Node merges them — so every
+response path, including the 400/500/502 errors, carries the CORS header and the
+frontend can read error text too.)
+
+### `js/download.js` change needed (Netlify frontend → absolute API URL)
+
+On Netlify the page is same-origin with nothing at `/api/download`, so the fetch
+must target the droplet. Add a configurable base and use it:
+
+```js
+// The download API runs on the DigitalOcean droplet, a different origin than
+// this Netlify-hosted page. Point this at the droplet's API endpoint.
+const API_BASE = "https://downloader.<your-domain>";
+...
+// was: fetch('/api/download?url=' + encodeURIComponent(url))
+const res = await fetch(API_BASE + '/api/download?url=' + encodeURIComponent(url));
+```
+
+Everything else in `download.js` (reading `Content-Disposition`, blob download)
+stays the same. This edit ships to **Netlify**, not the droplet.
 
 ### `Dockerfile` change needed (add the POT client plugin)
 
@@ -184,21 +248,32 @@ arg (and its comment) unless the droplet's egress needs it.
 2. **Reconcile the code** (see Git reality) — make sure the droplet-side repo has
    the current `server.js` + `Dockerfile` (embedded below) plus the new
    `docker-compose.yml` and the two `server.js`/`Dockerfile` edits above.
-3. **Wire the endpoint** into the existing reverse proxy (new subdomain preferred;
-   TLS via the proxy's existing mechanism — Let's Encrypt/Caddy auto, etc.).
-4. **Get cookies onto the droplet** as `/opt/youtube-embedder/cookies.txt`
+3. **Wire the API endpoint** into the existing reverse proxy on a **new subdomain**
+   (e.g. `downloader.<their-domain>`); TLS via the proxy's existing mechanism
+   (Let's Encrypt / Caddy auto, etc.). This subdomain serves only `/api/download`.
+4. **Set `ALLOWED_ORIGIN`** (in `docker-compose.yml`) to the exact Netlify site
+   origin so the browser allows the cross-origin call.
+5. **Get cookies onto the droplet** as `/opt/youtube-embedder/cookies.txt`
    (throwaway account; `chmod 600`; never committed / never in the image).
-5. `docker compose up -d --build`, then test end-to-end from a browser: paste a
-   real, modern YouTube URL and confirm a playable mp4 downloads.
-6. If blocked despite cookies + POT: set `YTDLP_PROXY` to a residential proxy and
+6. `docker compose up -d --build` on the droplet.
+7. **Update the Netlify frontend**: set `API_BASE` in `js/download.js` to the new
+   droplet subdomain and redeploy Netlify (this is the ONLY change on the Netlify
+   side; the rest of the static site is unchanged).
+8. **Test end-to-end from the live Netlify URL**: paste a real, modern YouTube URL,
+   confirm the browser calls `downloader.<domain>/api/download` (check the Network
+   tab / no CORS error) and a playable mp4 downloads.
+9. If blocked despite cookies + POT: set `YTDLP_PROXY` to a residential proxy and
    redeploy. Tell the user about the per-GB cost tradeoff.
-7. Update `README.md` deployment section to document the droplet/compose setup.
+10. Update `README.md` to document the split (Netlify frontend + droplet API).
 
 ## What the USER must provide
 
+- The **exact Netlify site origin** (e.g. `https://<name>.netlify.app` or the
+  custom domain) — needed for `ALLOWED_ORIGIN` and to confirm the CORS setup.
 - A **throwaway Google account** and its exported YouTube `cookies.txt`
   (Netscape format — e.g. a "Get cookies.txt" browser extension while logged in).
-- A **subdomain / DNS record** (or a path) on the droplet's domain for this app.
+- A **subdomain / DNS record** on the droplet's domain for the API
+  (e.g. `downloader.<their-domain>`).
 - **SSH/root access** to the droplet (the receiving Claude will need to inspect
   and deploy).
 - (Only if needed) a **residential proxy** subscription for the backstop.
@@ -290,7 +365,8 @@ function handleDownload(req, res) {
   if (COOKIES_FILE) {
     args.push("--cookies", COOKIES_FILE);
   }
-  // >>> ADD HERE (see plan): YTDLP_PROXY --proxy, and POT_PROVIDER_URL extractor-args
+  // >>> ADD HERE (see plan): if (YTDLP_PROXY) args.push("--proxy", YTDLP_PROXY);
+  // >>> and if (POT_PROVIDER_URL) args.push("--extractor-args", `youtubepot-bgutilhttp:base_url=${POT_PROVIDER_URL}`);
 
   const proc = spawn(PYTHON_BIN, args, { windowsHide: true });
 
@@ -353,6 +429,8 @@ function cleanup(tmpDir) {
 const server = http.createServer((req, res) => {
   const urlPath = req.url.split("?")[0];
   if (urlPath === "/api/download") {
+    // >>> ADD HERE (see plan): CORS headers (Allow-Origin=ALLOWED_ORIGIN,
+    // >>> Expose-Headers: Content-Disposition) + OPTIONS 204 preflight short-circuit.
     handleDownload(req, res);
     return;
   }
